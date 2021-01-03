@@ -1,0 +1,18 @@
+{
+  "productName": "Gahi",
+  "appId": "io.keshihoriuchi.gahi",
+  "files": [],
+  "directories": {
+    "app": "app",
+    "output": "releases"
+  },
+  "win": {
+    "target": [
+      {
+        "target": "zip",
+        "arch": ["x64"]
+      }
+    ]
+  },
+  "extraFiles": ["cli/**/*"]
+}

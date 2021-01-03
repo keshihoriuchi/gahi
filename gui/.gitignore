@@ -1,0 +1,8 @@
+/node_modules
+/dist
+/cli
+/temp_index
+/app/node_modules
+/releases
+/app/dist
+/app/cli

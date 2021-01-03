@@ -1,0 +1,13 @@
+{
+  "name": "gahi-gui",
+  "version": "0.0.1",
+  "description": "",
+  "main": "dist/main.js",
+  "scripts": {},
+  "author": "Takeshi Horiuchi",
+  "license": "GPL-2.0",
+  "dependencies": {
+    "iconv-lite": "^0.6.2",
+    "split2": "^3.2.2"
+  }
+}
