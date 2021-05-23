@@ -4,7 +4,7 @@
 
 ## Readme (English)
 
-This application finds duplicated images in a directory. And you can select and delete some found images.
+This application finds duplicated images in a directory. Then you can select and delete some found images.
 
 ![](./demo_en.gif)
 
@@ -18,7 +18,7 @@ This application finds duplicated images in a directory. And you can select and 
 * cli
     * CLI written by Java powered by [LIRE](https://github.com/dermotte/LIRE)
 * gui
-    * Electron + React + TypeScript. It executes the CLI on relative path internally.
+    * Electron + React + TypeScript. It executes the CLI on a relative path internally.
 
 ### Download
 
