@@ -103,7 +103,7 @@ public class ImageSD {
 
         ExecutorService pool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
         try (IndexWriter iw = LuceneUtils.createIndexWriter(FSDirectory.open(indexDir), true, LuceneUtils.AnalyzerType.WhitespaceAnalyzer)) {
-            List<Callable<String>> tasks = new ArrayList<>();
+            List<Callable<Void>> tasks = new ArrayList<>(size);
             for (int i = 0; i < size; i++) {
                 Callable task = new CreateIndexTask(images.get(i), builder, iw, size);
                 tasks.add(task);
@@ -128,7 +128,7 @@ public class ImageSD {
         }
     }
 
-    static class CreateIndexTask implements Callable<String> {
+    static class CreateIndexTask implements Callable<Void> {
         final String imgPath;
         final DocumentBuilder builder;
         final IndexWriter iw;
@@ -140,7 +140,7 @@ public class ImageSD {
             this.size = size;
         }
 
-        public String call() {
+        public Void call() {
             try {
                 BufferedImage img = ImageIO.read(new File(imgPath));
                 Document document = builder.createDocument(img, imgPath);
@@ -153,7 +153,7 @@ public class ImageSD {
             } catch (RuntimeException | IOException e) {
                 System.err.println(e);
             }
-            return "";
+            return null;
         }
         private void safePrintln(JSONObject s) {
             synchronized (System.out) {
