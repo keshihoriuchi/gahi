@@ -77,6 +77,7 @@ ipcMain.on("start-cli", async (ev, dirPath, algo) => {
   console.log(cmd);
   cli = child_process.spawn("cmd.exe", ["/C", cmd, "dup", "-a", algo, dirPath]);
   let errStr = "";
+  let finished = 0;
   cli.stdout
     .pipe(iconv.decodeStream(`cp${cpCode}`))
     .pipe(split2())
@@ -90,6 +91,8 @@ ipcMain.on("start-cli", async (ev, dirPath, algo) => {
         return;
       }
       if (d.type === "index_creating") {
+        finished++;
+        d.finished = finished;
         ev.reply("cli-interm", d);
         mainWindow.setProgressBar(d.finished / d.total);
       } else if (d.type === "finish") {

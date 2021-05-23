@@ -7,6 +7,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import javax.imageio.ImageIO;
@@ -93,28 +96,21 @@ public class ImageSD {
         return result;
     }
 
-    public void createIndex() throws IOException {
+    public void createIndex() throws IOException, InterruptedException {
         List<String> images = FileUtils.getAllImages(baseDir, isRecursive);
         int size = images.size();
         DocumentBuilder builder = new GlobalDocumentBuilder(algo);
 
+        ExecutorService pool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
         try (IndexWriter iw = LuceneUtils.createIndexWriter(FSDirectory.open(indexDir), true, LuceneUtils.AnalyzerType.WhitespaceAnalyzer)) {
+            List<Callable<String>> tasks = new ArrayList<>();
             for (int i = 0; i < size; i++) {
-                String imgPath = images.get(i);
-                try {
-                    BufferedImage img = ImageIO.read(new File(imgPath));
-                    Document document = builder.createDocument(img, imgPath);
-                    iw.addDocument(document);
-                    JSONObject jo = new JSONObject();
-                    jo.put("type", "index_creating");
-                    jo.put("path", imgPath);
-                    jo.put("total", size);
-                    jo.put("finished", i + 1);
-                    System.out.println(jo);
-                } catch (RuntimeException e) {
-                    System.err.println(e);
-                }
+                Callable task = new CreateIndexTask(images.get(i), builder, iw, size);
+                tasks.add(task);
             }
+            pool.invokeAll(tasks);
+        } finally {
+            pool.shutdown();
         }
     }
 
@@ -128,6 +124,40 @@ public class ImageSD {
                 Document doc = reader.document(i);
 //        System.out.println(doc.get("descriptorImageIdentifier"));
 //      doc.getFields().forEach(f -> System.out.println(f.name()));
+            }
+        }
+    }
+
+    static class CreateIndexTask implements Callable<String> {
+        final String imgPath;
+        final DocumentBuilder builder;
+        final IndexWriter iw;
+        final int size;
+        public CreateIndexTask(String imgPath, DocumentBuilder builder, IndexWriter iw, int size) {
+            this.imgPath = imgPath;
+            this.builder = builder;
+            this.iw = iw;
+            this.size = size;
+        }
+
+        public String call() {
+            try {
+                BufferedImage img = ImageIO.read(new File(imgPath));
+                Document document = builder.createDocument(img, imgPath);
+                iw.addDocument(document);
+                JSONObject jo = new JSONObject();
+                jo.put("type", "index_creating");
+                jo.put("path", imgPath);
+                jo.put("total", size);
+                safePrintln(jo);
+            } catch (RuntimeException | IOException e) {
+                System.err.println(e);
+            }
+            return "";
+        }
+        private void safePrintln(JSONObject s) {
+            synchronized (System.out) {
+                System.out.println(s);
             }
         }
     }
