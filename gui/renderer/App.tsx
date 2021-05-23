@@ -2,6 +2,7 @@ import React, { useEffect, useState, useLayoutEffect } from "react";
 import Similars from "./components/Similars";
 import { ImageFile, Gahi } from "../src/types";
 import styled from "styled-components";
+import ReactPaginate from "react-paginate";
 import { FcApproval } from "react-icons/fc";
 import I18n from "./i18n";
 
@@ -99,6 +100,11 @@ const EmptyResult = styled.div`
   margin-top: 64px;
 `;
 
+const PageController = styled.div`
+  display: flex;
+  justify-content: center;
+`;
+
 interface Interm {
   path: string;
   total: number;
@@ -183,6 +189,7 @@ const App: React.FC = () => {
   });
   const [algo, setAlgo] = useState(algos[0]);
   const [errorDetail, setErrorDetail] = useState<null | ErrorDetail>(null);
+  const [page, setPage] = useState(1);
 
   async function clickDirectoryChooseButton() {
     const dir = await window.gahi.chooseDirectory();
@@ -195,6 +202,7 @@ const App: React.FC = () => {
     };
     window.gahi.cli.addIntermListenser(listener);
     const resultsListener = (_e: any, d: any) => {
+      setPage(1);
       setViewerMode({ enabled: false });
       setImageFiles(d);
       setRunning("finish");
@@ -332,39 +340,75 @@ const App: React.FC = () => {
             <div>{I18n.duplicatedFileIsNotFound}</div>
           </EmptyResult>
         ) : (
-          imageFiles.map((sims, i) => {
-            return (
-              <Similars
-                similars={sims}
-                key={dirPath + sims[0].name}
-                onSelectImage={(j) => () =>
-                  setViewerMode({
-                    enabled: true,
-                    i,
-                    j,
-                    prevX: window.scrollX,
-                    prevY: window.scrollY,
-                    initEnabled: true,
-                  })}
-                onClickDeleteButton={(j) => async () => {
-                  const isApprove = await window.gahi.deleteDialog(
-                    I18n.deleteDialogMessage(sims[j].name),
-                    I18n.deleteDialogDetail,
-                    I18n.deleteDialogOk,
-                    I18n.deleteDialogCancel
-                  );
-                  if (isApprove) {
-                    window.gahi.moveToTrash(sims[j].path);
-                    setImageFiles((imf) =>
-                      imf.map((x, xi) =>
-                        i !== xi ? x : x.filter((_y, yj) => yj !== j)
-                      )
-                    );
-                  }
-                }}
-              />
-            );
-          })
+          <div>
+            <div>
+              {imageFiles.map((sims, i) => {
+                if (!((page - 1) * 10 <= i && i < page * 10)) return "";
+                return (
+                  <Similars
+                    similars={sims}
+                    key={dirPath + sims[0].name}
+                    onSelectImage={(j) => () =>
+                      setViewerMode({
+                        enabled: true,
+                        i,
+                        j,
+                        prevX: window.scrollX,
+                        prevY: window.scrollY,
+                        initEnabled: true,
+                      })}
+                    onClickDeleteButton={(j) => async () => {
+                      const isApprove = await window.gahi.deleteDialog(
+                        I18n.deleteDialogMessage(sims[j].name),
+                        I18n.deleteDialogDetail,
+                        I18n.deleteDialogOk,
+                        I18n.deleteDialogCancel
+                      );
+                      if (isApprove) {
+                        window.gahi.moveToTrash(sims[j].path);
+                        setImageFiles((imf) =>
+                          imf.map((x, xi) =>
+                            i !== xi ? x : x.filter((_y, yj) => yj !== j)
+                          )
+                        );
+                      }
+                    }}
+                  />
+                );
+              })}
+            </div>
+            {imageFiles.length === 0 ? (
+              ""
+            ) : (
+              <PageController>
+                <ReactPaginate
+                  previousLabel={"<"}
+                  nextLabel={">"}
+                  breakLabel="..."
+                  pageCount={Math.floor(imageFiles.length / 10)}
+                  marginPagesDisplayed={2}
+                  pageRangeDisplayed={5}
+                  onPageChange={(d) => {
+                    console.log(d);
+                    setPage(d.selected + 1);
+                  }}
+                  initialPage={page}
+                  // For Bootstrap 4
+                  containerClassName="pagination"
+                  pageClassName="page-item"
+                  pageLinkClassName="page-link"
+                  activeClassName="active"
+                  previousClassName="page-item"
+                  nextClassName="page-item"
+                  previousLinkClassName="page-link"
+                  nextLinkClassName="page-link"
+                  disabledClassName="disabled"
+                  breakClassName="page-item"
+                  breakLinkClassName="page-link"
+                />
+              </PageController>
+            )}
+          </div>
         )}
       </div>
     </div>

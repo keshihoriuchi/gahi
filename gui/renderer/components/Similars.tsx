@@ -1,5 +1,5 @@
 import React from "react";
-import { DateTime } from "luxon";
+import { DateTime, DateTimeFormatOptions, LocaleOptions } from "luxon";
 import { ImageFile } from "../../src/types";
 import styled from "styled-components";
 import { BsTrash } from "react-icons/bs";
@@ -66,7 +66,7 @@ const DeleteButton = styled.button.attrs((_props) => ({
   /* padding: 6px 20px; */
 `;
 
-const DATETIME_FORMAT = {
+const DATETIME_FORMAT: DateTimeFormatOptions & LocaleOptions = {
   year: "numeric",
   month: "2-digit",
   day: "2-digit",
