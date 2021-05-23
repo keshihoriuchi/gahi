@@ -17,7 +17,7 @@ import org.json.JSONWriter;
 public class Cli {
     private static ImageSD imageSD;
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
         CommandLineParser parser = new DefaultParser();
         final Options options = new Options();
         options.addOption(new Option("a", "algorithm", true, "Algorithm to classify image"));
@@ -58,7 +58,7 @@ public class Cli {
         }
     }
 
-    static void prepare(String dir, Class algo) throws IOException {
+    static void prepare(String dir, Class algo) throws IOException, InterruptedException {
         imageSD = new ImageSD(Paths.get(dir), Paths.get(".", "./temp_index"), algo);
         imageSD.clearIndex();
         imageSD.createIndex();
