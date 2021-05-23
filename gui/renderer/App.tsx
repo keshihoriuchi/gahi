@@ -177,20 +177,29 @@ const renderErrorDetail = (ed: ErrorDetail) => {
   );
 };
 
+type PageInfo = {
+  imageFileCount: number;
+  page: number;
+  dirPath: string;
+};
+
 const App: React.FC = () => {
   const [dirPath, setDirPath] = useState("");
   const [running, setRunning] = useState<
     "init" | "starting" | "started" | "finish" | "error"
   >("init");
   const [interm, setInterm] = useState<null | Interm>(null);
-  const [imageFileCount, setImageFileCount] = useState(0);
   const [imageFiles, setImageFiles] = useState<ImageFile[][]>([]);
   const [viewerMode, setViewerMode] = useState<ViewerMode>({
     enabled: false,
   });
   const [algo, setAlgo] = useState(algos[0]);
   const [errorDetail, setErrorDetail] = useState<null | ErrorDetail>(null);
-  const [page, setPage] = useState(1);
+  const [pageInfo, setPageInfo] = useState<PageInfo>({
+    imageFileCount: 0,
+    page: 1,
+    dirPath: "",
+  });
 
   async function clickDirectoryChooseButton() {
     const dir = await window.gahi.chooseDirectory();
@@ -203,13 +212,14 @@ const App: React.FC = () => {
     };
     window.gahi.cli.addIntermListenser(listener);
     const resultsListener = async (_e: any, d: any) => {
-      setPage(1);
       setViewerMode({ enabled: false });
-      setImageFileCount(d as number);
+      setPageInfo({
+        imageFileCount: d.imageFileCount,
+        page: 1,
+        dirPath: d.dirPath,
+      });
       setRunning("finish");
       setInterm(null);
-      const ifs = await window.gahi.cli.fetchImagefiles(0, 10);
-      setImageFiles(ifs);
     };
     window.gahi.cli.addResultsListenser(resultsListener);
     const errorListener = (_e: any, d: any) => {
@@ -243,11 +253,14 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const func = async () => {
-      const ifs = await window.gahi.cli.fetchImagefiles((page - 1) * 10, 10);
+      const ifs = await window.gahi.cli.fetchImagefiles(
+        (pageInfo.page - 1) * 10,
+        10
+      );
       setImageFiles(ifs);
     };
     func();
-  }, [page]);
+  }, [pageInfo]);
 
   useLayoutEffect(() => {
     if (
@@ -343,7 +356,7 @@ const App: React.FC = () => {
         ? renderErrorDetail(errorDetail)
         : ""}
       <div>
-        {imageFileCount === 0 && running === "finish" ? (
+        {pageInfo.imageFileCount === 0 && running === "finish" ? (
           <EmptyResult>
             <div>
               <FcApproval />
@@ -387,7 +400,7 @@ const App: React.FC = () => {
                 );
               })}
             </div>
-            {imageFileCount === 0 ? (
+            {pageInfo.imageFileCount === 0 ? (
               ""
             ) : (
               <PageController>
@@ -395,18 +408,29 @@ const App: React.FC = () => {
                   previousLabel={"<"}
                   nextLabel={">"}
                   breakLabel="..."
-                  pageCount={Math.floor(imageFileCount / 10) + 1}
+                  pageCount={
+                    // This formula reprensenting
+                    //  0-10: 1
+                    // 11-20: 2
+                    // 21-30: 3
+                    // ...
+                    pageInfo.imageFileCount === 0
+                      ? 1
+                      : Math.floor((pageInfo.imageFileCount - 1) / 10) + 1
+                  }
                   marginPagesDisplayed={2}
                   pageRangeDisplayed={5}
                   onPageChange={(d) => {
                     console.log(d);
                     // prevent reset ImageFiles when transit from viewer mode
-                    if (d.selected + 1 !== page) {
+                    if (d.selected + 1 !== pageInfo.page) {
                       setImageFiles([]);
-                      setPage(d.selected + 1);
+                      setPageInfo((p) => {
+                        return { ...p, ...{ page: d.selected + 1 } };
+                      });
                     }
                   }}
-                  initialPage={page - 1}
+                  forcePage={pageInfo.page - 1}
                   // For Bootstrap 4
                   containerClassName="pagination"
                   pageClassName="page-item"

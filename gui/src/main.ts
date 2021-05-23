@@ -97,7 +97,10 @@ ipcMain.on("start-cli", async (ev, dirPath, algo) => {
         mainWindow.setProgressBar(d.finished / d.total);
       } else if (d.type === "finish") {
         results = d.results;
-        ev.reply("cli-results", results.length);
+        ev.reply("cli-results", {
+          imageFileCount: results.length,
+          dirPath,
+        });
         mainWindow.setProgressBar(-1);
       } else {
         console.log(d);
