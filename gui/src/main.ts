@@ -16,23 +16,34 @@ import { ImageFile } from "./types";
 
 function transformCliResults(results: string[][]): Promise<ImageFile[][]> {
   return Promise.all(
-    results.map((rr) =>
-      Promise.all(
-        rr.map(async (p) => {
-          const nImg = nativeImage.createFromPath(p);
-          const size = nImg.getSize();
-          const stats = await fs.promises.stat(p);
-          return {
-            path: process.env.DEV_MODE === "server" ? nImg.toDataURL() : p,
-            name: path.basename(p),
-            width: size.width,
-            height: size.height,
-            birthtime: stats.birthtime,
-            mtime: stats.mtime,
-            size: stats.size,
-          };
-        })
-      )
+    results.map(
+      (rr) =>
+        Promise.all(
+          rr.map(
+            async (p): Promise<ImageFile | null> => {
+              const nImg = nativeImage.createFromPath(p);
+              const size = nImg.getSize();
+              try {
+                const stats = await fs.promises.stat(p);
+                return {
+                  path:
+                    process.env.DEV_MODE === "server" ? nImg.toDataURL() : p,
+                  name: path.basename(p),
+                  width: size.width,
+                  height: size.height,
+                  birthtime: stats.birthtime,
+                  mtime: stats.mtime,
+                  size: stats.size,
+                };
+              } catch (e) {
+                if (e.code === "ENOENT") {
+                  return null;
+                }
+                throw e;
+              }
+            }
+          )
+        ).then((rr) => rr.filter((p) => p !== null)) as Promise<ImageFile[]>
     )
   );
 }
@@ -41,6 +52,7 @@ const cpCode = child_process
   .execSync("chcp", { encoding: "utf-8" })
   .match(/(\d+)/)![0];
 let cli = null;
+let results: string[][] = [];
 ipcMain.on("start-cli", async (ev, dirPath, algo) => {
   try {
     const stat = await fs.promises.stat(dirPath);
@@ -81,15 +93,9 @@ ipcMain.on("start-cli", async (ev, dirPath, algo) => {
         ev.reply("cli-interm", d);
         mainWindow.setProgressBar(d.finished / d.total);
       } else if (d.type === "finish") {
-        const results: string[][] = d.results;
-        transformCliResults(results)
-          .then((r) => {
-            ev.reply("cli-results", r);
-          })
-          .catch((e) => console.error(e))
-          .then((_r) => {
-            mainWindow.setProgressBar(-1);
-          });
+        results = d.results;
+        ev.reply("cli-results", results.length);
+        mainWindow.setProgressBar(-1);
       } else {
         console.log(d);
       }
@@ -110,6 +116,17 @@ ipcMain.on("start-cli", async (ev, dirPath, algo) => {
       mainWindow.setProgressBar(-1);
     }
   });
+});
+
+ipcMain.handle("fetch-image-files", (_e, offset: any, count: any) => {
+  if (offset + 1 > results.length) {
+    return [];
+  }
+  const r: string[][] = [];
+  for (let i = offset; i < offset + count && i < results.length; i++) {
+    r.push(results[i]);
+  }
+  return transformCliResults(r);
 });
 
 ipcMain.handle("choose-directory", () => {

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useLayoutEffect } from "react";
 import Similars from "./components/Similars";
 import { ImageFile, Gahi } from "../src/types";
 import styled from "styled-components";
+import ReactPaginate from "react-paginate";
 import { FcApproval } from "react-icons/fc";
 import I18n from "./i18n";
 
@@ -99,6 +100,11 @@ const EmptyResult = styled.div`
   margin-top: 64px;
 `;
 
+const PageController = styled.div`
+  display: flex;
+  justify-content: center;
+`;
+
 interface Interm {
   path: string;
   total: number;
@@ -177,12 +183,14 @@ const App: React.FC = () => {
     "init" | "starting" | "started" | "finish" | "error"
   >("init");
   const [interm, setInterm] = useState<null | Interm>(null);
+  const [imageFileCount, setImageFileCount] = useState(0);
   const [imageFiles, setImageFiles] = useState<ImageFile[][]>([]);
   const [viewerMode, setViewerMode] = useState<ViewerMode>({
     enabled: false,
   });
   const [algo, setAlgo] = useState(algos[0]);
   const [errorDetail, setErrorDetail] = useState<null | ErrorDetail>(null);
+  const [page, setPage] = useState(1);
 
   async function clickDirectoryChooseButton() {
     const dir = await window.gahi.chooseDirectory();
@@ -194,11 +202,14 @@ const App: React.FC = () => {
       setInterm(d);
     };
     window.gahi.cli.addIntermListenser(listener);
-    const resultsListener = (_e: any, d: any) => {
+    const resultsListener = async (_e: any, d: any) => {
+      setPage(1);
       setViewerMode({ enabled: false });
-      setImageFiles(d);
+      setImageFileCount(d as number);
       setRunning("finish");
       setInterm(null);
+      const ifs = await window.gahi.cli.fetchImagefiles(0, 10);
+      setImageFiles(ifs);
     };
     window.gahi.cli.addResultsListenser(resultsListener);
     const errorListener = (_e: any, d: any) => {
@@ -229,6 +240,14 @@ const App: React.FC = () => {
       setRunning("started");
     }
   }, [running, dirPath, algo]);
+
+  useEffect(() => {
+    const func = async () => {
+      const ifs = await window.gahi.cli.fetchImagefiles((page - 1) * 10, 10);
+      setImageFiles(ifs);
+    };
+    func();
+  }, [page]);
 
   useLayoutEffect(() => {
     if (
@@ -324,7 +343,7 @@ const App: React.FC = () => {
         ? renderErrorDetail(errorDetail)
         : ""}
       <div>
-        {imageFiles.length === 0 && running === "finish" ? (
+        {imageFileCount === 0 && running === "finish" ? (
           <EmptyResult>
             <div>
               <FcApproval />
@@ -332,39 +351,78 @@ const App: React.FC = () => {
             <div>{I18n.duplicatedFileIsNotFound}</div>
           </EmptyResult>
         ) : (
-          imageFiles.map((sims, i) => {
-            return (
-              <Similars
-                similars={sims}
-                key={dirPath + sims[0].name}
-                onSelectImage={(j) => () =>
-                  setViewerMode({
-                    enabled: true,
-                    i,
-                    j,
-                    prevX: window.scrollX,
-                    prevY: window.scrollY,
-                    initEnabled: true,
-                  })}
-                onClickDeleteButton={(j) => async () => {
-                  const isApprove = await window.gahi.deleteDialog(
-                    I18n.deleteDialogMessage(sims[j].name),
-                    I18n.deleteDialogDetail,
-                    I18n.deleteDialogOk,
-                    I18n.deleteDialogCancel
-                  );
-                  if (isApprove) {
-                    window.gahi.moveToTrash(sims[j].path);
-                    setImageFiles((imf) =>
-                      imf.map((x, xi) =>
-                        i !== xi ? x : x.filter((_y, yj) => yj !== j)
-                      )
-                    );
-                  }
-                }}
-              />
-            );
-          })
+          <div>
+            <div>
+              {imageFiles.map((sims, i) => {
+                return (
+                  <Similars
+                    similars={sims}
+                    key={dirPath + sims[0].name}
+                    onSelectImage={(j) => () =>
+                      setViewerMode({
+                        enabled: true,
+                        i,
+                        j,
+                        prevX: window.scrollX,
+                        prevY: window.scrollY,
+                        initEnabled: true,
+                      })}
+                    onClickDeleteButton={(j) => async () => {
+                      const isApprove = await window.gahi.deleteDialog(
+                        I18n.deleteDialogMessage(sims[j].name),
+                        I18n.deleteDialogDetail,
+                        I18n.deleteDialogOk,
+                        I18n.deleteDialogCancel
+                      );
+                      if (isApprove) {
+                        window.gahi.moveToTrash(sims[j].path);
+                        setImageFiles((imf) =>
+                          imf.map((x, xi) =>
+                            i !== xi ? x : x.filter((_y, yj) => yj !== j)
+                          )
+                        );
+                      }
+                    }}
+                  />
+                );
+              })}
+            </div>
+            {imageFileCount === 0 ? (
+              ""
+            ) : (
+              <PageController>
+                <ReactPaginate
+                  previousLabel={"<"}
+                  nextLabel={">"}
+                  breakLabel="..."
+                  pageCount={Math.floor(imageFileCount / 10) + 1}
+                  marginPagesDisplayed={2}
+                  pageRangeDisplayed={5}
+                  onPageChange={(d) => {
+                    console.log(d);
+                    // prevent reset ImageFiles when transit from viewer mode
+                    if (d.selected + 1 !== page) {
+                      setImageFiles([]);
+                      setPage(d.selected + 1);
+                    }
+                  }}
+                  initialPage={page - 1}
+                  // For Bootstrap 4
+                  containerClassName="pagination"
+                  pageClassName="page-item"
+                  pageLinkClassName="page-link"
+                  activeClassName="active"
+                  previousClassName="page-item"
+                  nextClassName="page-item"
+                  previousLinkClassName="page-link"
+                  nextLinkClassName="page-link"
+                  disabledClassName="disabled"
+                  breakClassName="page-item"
+                  breakLinkClassName="page-link"
+                />
+              </PageController>
+            )}
+          </div>
         )}
       </div>
     </div>

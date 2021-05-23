@@ -31,6 +31,8 @@ const gahi: Gahi = {
       ipcRenderer.on("cli-error", listener),
     removeErrorListenser: (listener: (e: any, d: any) => void) =>
       ipcRenderer.removeListener("cli-error", listener),
+    fetchImagefiles: (offset: number, count: number) =>
+      ipcRenderer.invoke("fetch-image-files", offset, count),
   },
 };
 
