@@ -17,9 +17,9 @@ jobs:
         with:
           node-version: '14'
       - name: Release GUI
-        run: cd gui && npm install && npm run copy-cli && npm run release
+        run: npm i -g npm && cd gui && npm install && npm run copy-cli && npm run release
       - name: Archive a zip for releasing
         uses: actions/upload-artifact@v2
         with:
-          name: Gahi-0.0.2-win.zip
-          path: gui/releases/Gahi-0.0.2-win.zip
+          name: Gahi-0.0.3-win.zip
+          path: gui/releases/Gahi-0.0.3-win.zip
