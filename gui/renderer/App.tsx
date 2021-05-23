@@ -183,6 +183,7 @@ const App: React.FC = () => {
     "init" | "starting" | "started" | "finish" | "error"
   >("init");
   const [interm, setInterm] = useState<null | Interm>(null);
+  const [imageFileCount, setImageFileCount] = useState(0);
   const [imageFiles, setImageFiles] = useState<ImageFile[][]>([]);
   const [viewerMode, setViewerMode] = useState<ViewerMode>({
     enabled: false,
@@ -201,12 +202,14 @@ const App: React.FC = () => {
       setInterm(d);
     };
     window.gahi.cli.addIntermListenser(listener);
-    const resultsListener = (_e: any, d: any) => {
+    const resultsListener = async (_e: any, d: any) => {
       setPage(1);
       setViewerMode({ enabled: false });
-      setImageFiles(d);
+      setImageFileCount(d as number);
       setRunning("finish");
       setInterm(null);
+      const ifs = await window.gahi.cli.fetchImagefiles(0, 10);
+      setImageFiles(ifs);
     };
     window.gahi.cli.addResultsListenser(resultsListener);
     const errorListener = (_e: any, d: any) => {
@@ -237,6 +240,14 @@ const App: React.FC = () => {
       setRunning("started");
     }
   }, [running, dirPath, algo]);
+
+  useEffect(() => {
+    const func = async () => {
+      const ifs = await window.gahi.cli.fetchImagefiles((page - 1) * 10, 10);
+      setImageFiles(ifs);
+    };
+    func();
+  }, [page]);
 
   useLayoutEffect(() => {
     if (
@@ -332,7 +343,7 @@ const App: React.FC = () => {
         ? renderErrorDetail(errorDetail)
         : ""}
       <div>
-        {imageFiles.length === 0 && running === "finish" ? (
+        {imageFileCount === 0 && running === "finish" ? (
           <EmptyResult>
             <div>
               <FcApproval />
@@ -343,7 +354,6 @@ const App: React.FC = () => {
           <div>
             <div>
               {imageFiles.map((sims, i) => {
-                if (!((page - 1) * 10 <= i && i < page * 10)) return "";
                 return (
                   <Similars
                     similars={sims}
@@ -377,7 +387,7 @@ const App: React.FC = () => {
                 );
               })}
             </div>
-            {imageFiles.length === 0 ? (
+            {imageFileCount === 0 ? (
               ""
             ) : (
               <PageController>
@@ -385,14 +395,18 @@ const App: React.FC = () => {
                   previousLabel={"<"}
                   nextLabel={">"}
                   breakLabel="..."
-                  pageCount={Math.floor(imageFiles.length / 10)}
+                  pageCount={Math.floor(imageFileCount / 10) + 1}
                   marginPagesDisplayed={2}
                   pageRangeDisplayed={5}
                   onPageChange={(d) => {
                     console.log(d);
-                    setPage(d.selected + 1);
+                    // prevent reset ImageFiles when transit from viewer mode
+                    if (d.selected + 1 !== page) {
+                      setImageFiles([]);
+                      setPage(d.selected + 1);
+                    }
                   }}
-                  initialPage={page}
+                  initialPage={page - 1}
                   // For Bootstrap 4
                   containerClassName="pagination"
                   pageClassName="page-item"

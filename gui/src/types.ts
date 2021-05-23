@@ -25,5 +25,6 @@ export type Gahi = {
     removeResultsListenser: (listener: (e: any, d: any) => void) => void;
     addErrorListenser: (listener: (e: any, d: any) => void) => void;
     removeErrorListenser: (listener: (e: any, d: any) => void) => void;
+    fetchImagefiles: (offset: number, count: number) => Promise<ImageFile[][]>;
   };
 };
