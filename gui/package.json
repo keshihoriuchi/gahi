@@ -1,6 +1,6 @@
 {
   "name": "gahi-gui",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -11,7 +11,7 @@
     "start:dev": "concurrently \"npm run start:dev:main\" \"npm run start:dev:renderer\"",
     "build:production": "cross-env NODE_ENV=production webpack",
     "release": "del-cli dist && tsc && npm run build:production && del-cli app/cli && del-cli app/dist && cpx \"dist/**/*\" app/dist && cpx \"cli/**/*\" app/cli && electron-builder",
-    "copy-cli": "del-cli cli && extract-zip ../cli/build/distributions/gahi-cli-0.0.2.zip && cpx \"./gahi-cli-0.0.2/**/*\" ./cli && del-cli gahi-cli-0.0.2"
+    "copy-cli": "del-cli cli && extract-zip ../cli/build/distributions/gahi-cli-0.0.3.zip && cpx \"./gahi-cli-0.0.3/**/*\" ./cli && del-cli gahi-cli-0.0.3"
   },
   "author": "Takeshi Horiuchi",
   "license": "GPL-2.0",
