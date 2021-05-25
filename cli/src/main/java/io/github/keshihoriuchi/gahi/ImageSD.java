@@ -15,6 +15,7 @@ import java.util.stream.Stream;
 import javax.imageio.ImageIO;
 import net.semanticmetadata.lire.builders.DocumentBuilder;
 import net.semanticmetadata.lire.builders.GlobalDocumentBuilder;
+import net.semanticmetadata.lire.imageanalysis.features.GlobalFeature;
 import net.semanticmetadata.lire.imageanalysis.features.global.CEDD;
 import net.semanticmetadata.lire.imageanalysis.features.global.EdgeHistogram;
 import net.semanticmetadata.lire.imageanalysis.features.global.FCTH;
@@ -44,15 +45,15 @@ public class ImageSD {
     private final Path indexDir;
     private final File baseDir;
     private final boolean isRecursive = false;
-    private final Class algo;
+    private final Class<? extends GlobalFeature> algo;
 
-    public ImageSD(Path baseDir, Path indexDir, Class algo) {
+    public ImageSD(Path baseDir, Path indexDir, Class<? extends GlobalFeature> algo) {
         this.baseDir = baseDir.toFile();
         this.indexDir = indexDir;
         this.algo = algo;
     }
 
-    public static Class getALGO(String algoStr) {
+    public static Class<? extends GlobalFeature> getALGO(String algoStr) {
         if (algoStr == null) return null;
         if (algoStr.equals("CEDD")) return CEDD.class;
         if (algoStr.equals("EdgeHistogram")) return EdgeHistogram.class;
@@ -76,7 +77,7 @@ public class ImageSD {
             ImageSearcher searcher = new GenericFastImageSearcher(ir.numDocs(), algo);
             ImageSearchHits hits = searcher.search(img, ir);
 
-            for (int i=0; i < hits.length(); i++) {
+            for (int i = 0; i < hits.length(); i++) {
                 Path path;
                 path = Paths.get(ir.document(hits.documentID(i)).getField(DocumentBuilder.FIELD_NAME_IDENTIFIER).stringValue());
                 result.add(new SimilarImage(hits.score(i), path));
@@ -105,12 +106,12 @@ public class ImageSD {
         try (IndexWriter iw = LuceneUtils.createIndexWriter(FSDirectory.open(indexDir), true, LuceneUtils.AnalyzerType.WhitespaceAnalyzer)) {
             List<Callable<Void>> tasks = new ArrayList<>(size);
             for (int i = 0; i < size; i++) {
-                Callable task = new CreateIndexTask(images.get(i), builder, iw, size);
+                Callable<Void> task = new CreateIndexTask(images.get(i), builder, iw, size);
                 tasks.add(task);
             }
             pool.invokeAll(tasks);
         } finally {
-            pool.shutdown();
+            pool.shutdownNow();
         }
     }
 

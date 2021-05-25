@@ -3,12 +3,12 @@ package io.github.keshihoriuchi.gahi;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
+
+import net.semanticmetadata.lire.imageanalysis.features.GlobalFeature;
 import net.semanticmetadata.lire.imageanalysis.features.global.EdgeHistogram;
 import org.apache.commons.cli.*;
-import org.apache.commons.math3.geometry.spherical.twod.Edge;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONWriter;
@@ -23,7 +23,7 @@ public class Cli {
         options.addOption(new Option("a", "algorithm", true, "Algorithm to classify image"));
         try {
             CommandLine cmd = parser.parse(options, args);
-            Class algo = EdgeHistogram.class;
+            Class<? extends GlobalFeature> algo = EdgeHistogram.class;
             String algoStr = cmd.getOptionValue("a");
             if (algoStr != null) {
                 algo = ImageSD.getALGO(algoStr);
@@ -58,7 +58,7 @@ public class Cli {
         }
     }
 
-    static void prepare(String dir, Class algo) throws IOException, InterruptedException {
+    static void prepare(String dir, Class<? extends GlobalFeature> algo) throws IOException, InterruptedException {
         imageSD = new ImageSD(Paths.get(dir), Paths.get(".", "./temp_index"), algo);
         imageSD.clearIndex();
         imageSD.createIndex();

@@ -1,6 +1,6 @@
 # Gahi CLI
 
-A command-line image simirality checker powered by LIRE.
+A command-line image similarity checker powered by LIRE.
 
 ## Usage (On Windows)
 
@@ -10,7 +10,7 @@ A command-line image simirality checker powered by LIRE.
 > .\gradlew.bat distZip
 ```
 
-Artifacts are built in `.\build\distributions`
+This command build artifacts to `.\build\distributions`
 
 ### Running
 
@@ -21,7 +21,7 @@ Artifacts are built in `.\build\distributions`
 
 #### Side effects
 
-`temp_index` direactory is created at the current directory. Indexing data are in the directory.
+Gahi creates `temp_index` directory at the current directory. Indexing data are in the directory.
 
 ## LICENSE
 
@@ -31,7 +31,7 @@ Because the license of LIRE is GPL v2.0.
 
 ## Internal steps
 
-1. Gahi creates `temp_index` at the current directory if it doesn' exist.
+1. Gahi creates `temp_index` at the current directory if it doesn't exist.
 2. Gahi removes all files in `temp_index`.
 3. Gahi creates index files for target dir.
 4. Gahi applies `dup` or `search` to index files.

@@ -185,9 +185,8 @@ type PageInfo = {
 
 const App: React.FC = () => {
   const [dirPath, setDirPath] = useState("");
-  const [running, setRunning] = useState<
-    "init" | "starting" | "started" | "finish" | "error"
-  >("init");
+  const [running, setRunning] =
+    useState<"init" | "starting" | "started" | "finish" | "error">("init");
   const [interm, setInterm] = useState<null | Interm>(null);
   const [imageFiles, setImageFiles] = useState<ImageFile[][]>([]);
   const [viewerMode, setViewerMode] = useState<ViewerMode>({
