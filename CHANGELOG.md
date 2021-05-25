@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 0.0.3 (2021/05/25)
+
+* FIX: App shutdown child processes immidiately when window is closed
+* UPDATE: Update versions of npm dependencies
+* FIX: Correct misspells of documents
+
 ## 0.0.2 (2021/05/23)
 
 * ADD: Paginate to save memory
