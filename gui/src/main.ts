@@ -13,45 +13,50 @@ import split2 from "split2";
 import * as iconv from "iconv-lite";
 import * as fs from "fs";
 import { ImageFile } from "./types";
+import pstree from "ps-tree";
 
 function transformCliResults(results: string[][]): Promise<ImageFile[][]> {
   return Promise.all(
     results.map(
       (rr) =>
         Promise.all(
-          rr.map(
-            async (p): Promise<ImageFile | null> => {
-              const nImg = nativeImage.createFromPath(p);
-              const size = nImg.getSize();
-              try {
-                const stats = await fs.promises.stat(p);
-                return {
-                  path:
-                    process.env.DEV_MODE === "server" ? nImg.toDataURL() : p,
-                  name: path.basename(p),
-                  width: size.width,
-                  height: size.height,
-                  birthtime: stats.birthtime,
-                  mtime: stats.mtime,
-                  size: stats.size,
-                };
-              } catch (e) {
-                if (e.code === "ENOENT") {
-                  return null;
-                }
-                throw e;
+          rr.map(async (p): Promise<ImageFile | null> => {
+            const nImg = nativeImage.createFromPath(p);
+            const size = nImg.getSize();
+            try {
+              const stats = await fs.promises.stat(p);
+              return {
+                path: process.env.DEV_MODE === "server" ? nImg.toDataURL() : p,
+                name: path.basename(p),
+                width: size.width,
+                height: size.height,
+                birthtime: stats.birthtime,
+                mtime: stats.mtime,
+                size: stats.size,
+              };
+            } catch (e) {
+              if (e.code === "ENOENT") {
+                return null;
               }
+              throw e;
             }
-          )
+          })
         ).then((rr) => rr.filter((p) => p !== null)) as Promise<ImageFile[]>
     )
   );
 }
 
+function safeSetProgressBar(w: BrowserWindow, progress: number) {
+  if (!w.isDestroyed()) {
+    w.setProgressBar(progress);
+  }
+}
+
 const cpCode = child_process
   .execSync("chcp", { encoding: "utf-8" })
   .match(/(\d+)/)![0];
-let cli = null;
+let cli: child_process.ChildProcessWithoutNullStreams | null = null;
+let cliChildren: readonly pstree.PS[] = [];
 let results: string[][] = [];
 ipcMain.on("start-cli", async (ev, dirPath, algo) => {
   try {
@@ -76,6 +81,16 @@ ipcMain.on("start-cli", async (ev, dirPath, algo) => {
   const cmd = path.join(basepath, "/cli/bin/gahi-cli.bat");
   console.log(cmd);
   cli = child_process.spawn("cmd.exe", ["/C", cmd, "dup", "-a", algo, dirPath]);
+  setTimeout(() => {
+    if (cli === null || cli.exitCode !== null) return;
+    pstree(cli.pid, (err, children) => {
+      if (err) {
+        console.error(err);
+        return;
+      }
+      cliChildren = children;
+    });
+  }, 1000);
   let errStr = "";
   let finished = 0;
   cli.stdout
@@ -94,14 +109,14 @@ ipcMain.on("start-cli", async (ev, dirPath, algo) => {
         finished++;
         d.finished = finished;
         ev.reply("cli-interm", d);
-        mainWindow.setProgressBar(d.finished / d.total);
+        safeSetProgressBar(mainWindow, d.finished / d.total);
       } else if (d.type === "finish") {
         results = d.results;
         ev.reply("cli-results", {
           imageFileCount: results.length,
           dirPath,
         });
-        mainWindow.setProgressBar(-1);
+        safeSetProgressBar(mainWindow, -1);
       } else {
         console.log(d);
       }
@@ -119,7 +134,7 @@ ipcMain.on("start-cli", async (ev, dirPath, algo) => {
         ev.reply("cli-error", { code: "internal", error: errStr });
       }
       console.error(`code: ${code}\nsignal: ${signal}`);
-      mainWindow.setProgressBar(-1);
+      safeSetProgressBar(mainWindow, -1);
     }
   });
 });
@@ -183,6 +198,15 @@ function createWindow() {
 
 app.on("web-contents-created", (event) => {
   event.preventDefault();
+});
+
+app.on("before-quit", () => {
+  if (cli !== null && cli.exitCode === null) {
+    cliChildren.forEach((p) => {
+      process.kill(parseInt(p.PID));
+    });
+    process.kill(cli.pid);
+  }
 });
 
 // Template for Mac OS

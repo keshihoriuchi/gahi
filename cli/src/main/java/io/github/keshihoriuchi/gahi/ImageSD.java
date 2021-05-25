@@ -77,7 +77,7 @@ public class ImageSD {
             ImageSearcher searcher = new GenericFastImageSearcher(ir.numDocs(), algo);
             ImageSearchHits hits = searcher.search(img, ir);
 
-            for (int i=0; i < hits.length(); i++) {
+            for (int i = 0; i < hits.length(); i++) {
                 Path path;
                 path = Paths.get(ir.document(hits.documentID(i)).getField(DocumentBuilder.FIELD_NAME_IDENTIFIER).stringValue());
                 result.add(new SimilarImage(hits.score(i), path));
@@ -111,7 +111,7 @@ public class ImageSD {
             }
             pool.invokeAll(tasks);
         } finally {
-            pool.shutdown();
+            pool.shutdownNow();
         }
     }
 
